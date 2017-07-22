@@ -5,18 +5,36 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ListView;
 
 import com.mgnoid.jsoncomm.AboutJSON.JsonGetter;
+import com.mgnoid.jsoncomm.AboutJSON.JsonResponse;
+import com.mgnoid.jsoncomm.AboutJSON.JsonService;
 import com.mgnoid.jsoncomm.Controller.DataAdapter;
+import com.mgnoid.jsoncomm.Models.JsonData;
 import com.mgnoid.jsoncomm.R;
+
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 
 public class ScrollActivity extends AppCompatActivity {
 
     JsonGetter getter;
     Button btn_close;
+    List<JsonData> listDatas;
+
+    private RecyclerView recyclerView;
+    private RecyclerView.LayoutManager reLayoutManager;
+    private JsonService service;
+
 
 
     @Override
@@ -26,12 +44,19 @@ public class ScrollActivity extends AppCompatActivity {
         startActivity(new Intent(this,BaseActivity.class));
         setContentView(R.layout.activity_scoll);
 
-        ListView listView = (ListView) findViewById(R.id.listView);
+        recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+
+        recyclerView.setHasFixedSize(true); // 크기 고정
+
+        reLayoutManager=new LinearLayoutManager(this);
+        recyclerView.setLayoutManager(reLayoutManager);
+
         getter = new JsonGetter();
 
+        service=JsonGetter.getService();
+
+
         btn_close=(Button)findViewById(R.id.btn_close);
-
-
         btn_close.setOnClickListener(new View.OnClickListener(){
 
             @Override
@@ -41,16 +66,14 @@ public class ScrollActivity extends AppCompatActivity {
             }
         });
 
+        callList();
+
         try{
             getter.join();
-        }catch (InterruptedException inE){
+        }catch (InterruptedException e){
 
         } // 스레드가 종료 될 때까지 기다린다 ( 기다리지 않으면 파싱한 json 데이터들이 adapter 생성 시에 아직 어레이리스트에 들어가지 않아있게 됨)
 
-        DataAdapter adapter = new DataAdapter(getApplicationContext(), getter);
-
-
-        listView.setAdapter(adapter);
 
     }
 
@@ -80,8 +103,38 @@ public class ScrollActivity extends AppCompatActivity {
 
     }//앱 종료를 위한 다이얼로그
 
+    public void callList() {
 
+        service.getItems().enqueue(new Callback<JsonResponse>() {
+            @Override
+            public void onResponse(Call<JsonResponse> call, Response<JsonResponse> response) {
+                listDatas = response.body().getItems();
 
+                for(int i=0;i<listDatas.size();i++){
 
+//                    System.out.println("==============check list==============");
+//                    System.out.println("rank : "+listDatas.get(i).getRank());
+//                    System.out.println("order : "+listDatas.get(i).getOrder());
+//                    System.out.println("url : "+listDatas.get(i).getUrl());
+//                    System.out.println("--------------------------------------");
 
+                }
+                DataAdapter adapter = new DataAdapter(listDatas);
+
+                recyclerView.setAdapter(adapter);
+
+            }
+
+            @Override
+            public void onFailure(Call<JsonResponse> call, Throwable t) {
+                Log.i("ORDINARY RES FAIL", t.toString());
+            }
+        });
+    }
 }
+
+
+
+
+
+
